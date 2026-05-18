@@ -9,6 +9,12 @@ from app.config import get_settings
 logger = logging.getLogger(__name__)
 settings = get_settings()
 
+MODEL_ALIASES = {
+    "google/gemini-flash-2.5": "google/gemini-2.5-flash",
+    "google/gemini-flash-1.5": "google/gemini-2.5-flash-lite",
+    "google/gemini-1.5-flash": "google/gemini-2.5-flash-lite",
+}
+
 
 class OpenRouterProvider:
     def __init__(self):
@@ -30,7 +36,7 @@ class OpenRouterProvider:
         temperature: float = 0.7,
         max_tokens: int = 2048,
     ) -> AsyncIterator[str]:
-        model = model or settings.default_llm_model
+        model = _normalize_model(model or settings.default_llm_model)
         body = {
             "model": model,
             "messages": messages,
@@ -40,7 +46,15 @@ class OpenRouterProvider:
         }
         try:
             async with self.client.stream("POST", "/chat/completions", json=body) as resp:
-                resp.raise_for_status()
+                if resp.status_code >= 400:
+                    body_text = _decode_response_body(await resp.aread())
+                    logger.error(
+                        "OpenRouter stream HTTP error for model %s: %s %s",
+                        model,
+                        resp.status_code,
+                        body_text,
+                    )
+                    resp.raise_for_status()
                 async for line in resp.aiter_lines():
                     if line.startswith("data: "):
                         data = line[6:]
@@ -55,7 +69,6 @@ class OpenRouterProvider:
                         except (json.JSONDecodeError, KeyError, IndexError):
                             continue
         except httpx.HTTPStatusError as e:
-            logger.error(f"OpenRouter HTTP error: {e.response.status_code} {e.response.text}")
             raise
         except Exception as e:
             logger.error(f"OpenRouter stream error: {e}")
@@ -68,7 +81,7 @@ class OpenRouterProvider:
         temperature: float = 0.7,
         max_tokens: int = 1024,
     ) -> str:
-        model = model or settings.default_llm_model
+        model = _normalize_model(model or settings.default_llm_model)
         body = {
             "model": model,
             "messages": messages,
@@ -82,7 +95,12 @@ class OpenRouterProvider:
             data = resp.json()
             return data["choices"][0]["message"]["content"]
         except httpx.HTTPStatusError as e:
-            logger.error(f"OpenRouter HTTP error: {e.response.status_code}")
+            logger.error(
+                "OpenRouter chat HTTP error for model %s: %s %s",
+                model,
+                e.response.status_code,
+                e.response.text,
+            )
             raise
         except Exception as e:
             logger.error(f"OpenRouter chat error: {e}")
@@ -90,3 +108,11 @@ class OpenRouterProvider:
 
     async def close(self):
         await self.client.aclose()
+
+
+def _normalize_model(model: str) -> str:
+    return MODEL_ALIASES.get(model.strip(), model.strip())
+
+
+def _decode_response_body(body: bytes) -> str:
+    return body.decode("utf-8", errors="replace")

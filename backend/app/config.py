@@ -10,8 +10,8 @@ class Settings(BaseSettings):
     tavily_api_key: str = ""
     serpapi_api_key: str = ""
     search_provider: str = "tavily"  # tavily | serpapi
-    default_llm_model: str = "anthropic/claude-3.5-sonnet"
-    fast_llm_model: str = "google/gemini-flash-1.5"
+    default_llm_model: str = "google/gemini-2.5-flash"
+    fast_llm_model: str = "google/gemini-2.5-flash-lite"
     tts_voice: str = "alloy"
     host: str = "0.0.0.0"
     port: int = 8000
