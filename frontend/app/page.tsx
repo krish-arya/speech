@@ -22,7 +22,7 @@ export default function Home() {
   };
 
   const showTranscript = session.transcript && session.state !== "listening" && session.state !== "idle";
-  const showResponse = (session.response || session.isStreaming) && session.state !== "idle";
+  const showResponse = !!session.response;
   const showSources = session.sources.length > 0;
   const showStatus = session.status && !session.response && session.state !== "idle" && session.state !== "listening";
 
@@ -66,7 +66,7 @@ export default function Home() {
       )}
 
       {/* Instruction */}
-      {session.state === "idle" && (
+      {session.state === "idle" && !session.response && (
         <motion.p
           initial={{ opacity: 0 }}
           animate={{ opacity: 0.5 }}

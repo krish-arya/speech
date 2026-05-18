@@ -13,8 +13,14 @@ interface UseStreamingResponseReturn {
   status: string;
   transcript: string;
   isStreaming: boolean;
-  processStream: (response: Response) => Promise<string>;
+  processStream: (response: Response, options?: ProcessStreamOptions) => Promise<string>;
+  showResponse: (text: string) => void;
+  setStatusMessage: (status: string) => void;
   reset: () => void;
+}
+
+interface ProcessStreamOptions {
+  streamToUi?: boolean;
 }
 
 export function useStreamingResponse(): UseStreamingResponseReturn {
@@ -25,7 +31,8 @@ export function useStreamingResponse(): UseStreamingResponseReturn {
   const [isStreaming, setIsStreaming] = useState(false);
   const abortRef = useRef<AbortController | null>(null);
 
-  const processStream = useCallback(async (res: Response) => {
+  const processStream = useCallback(async (res: Response, options: ProcessStreamOptions = {}) => {
+    const streamToUi = options.streamToUi ?? true;
     abortRef.current = new AbortController();
     setIsStreaming(true);
     setResponse("");
@@ -67,10 +74,13 @@ export function useStreamingResponse(): UseStreamingResponseReturn {
                 break;
               case "token":
                 responseText += event.data;
-                setResponse((prev) => prev + event.data);
+                if (streamToUi) {
+                  setResponse((prev) => prev + event.data);
+                }
                 break;
               case "done":
                 if (event.data?.text) responseText = event.data.text;
+                if (streamToUi && event.data?.text) setResponse(event.data.text);
                 if (event.data?.sources) setSources(event.data.sources);
                 break;
               case "error":
@@ -93,6 +103,14 @@ export function useStreamingResponse(): UseStreamingResponseReturn {
     return responseText;
   }, []);
 
+  const showResponse = useCallback((text: string) => {
+    setResponse(text);
+  }, []);
+
+  const setStatusMessage = useCallback((nextStatus: string) => {
+    setStatus(nextStatus);
+  }, []);
+
   const reset = useCallback(() => {
     if (abortRef.current) {
       abortRef.current.abort();
@@ -104,5 +122,15 @@ export function useStreamingResponse(): UseStreamingResponseReturn {
     setIsStreaming(false);
   }, []);
 
-  return { response, sources, status, transcript, isStreaming, processStream, reset };
+  return {
+    response,
+    sources,
+    status,
+    transcript,
+    isStreaming,
+    processStream,
+    showResponse,
+    setStatusMessage,
+    reset,
+  };
 }
