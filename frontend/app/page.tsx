@@ -28,6 +28,9 @@ export default function Home() {
 
   return (
     <main className="h-screen flex flex-col items-center justify-center gap-8 px-4">
+      <header className="w-full text-center mt-4">
+        <h1 className="text-2xl sm:text-3xl font-semibold">Voice based AI assistance by Credesoft</h1>
+      </header>
       {/* Top space */}
       <div className="flex-1" />
 
