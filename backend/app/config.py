@@ -5,6 +5,8 @@ from functools import lru_cache
 class Settings(BaseSettings):
     openrouter_api_key: str = ""
     openrouter_base_url: str = "https://openrouter.ai/api/v1"
+    stt_model: str = "openai/whisper-1"
+    stt_language: str = ""
     tavily_api_key: str = ""
     serpapi_api_key: str = ""
     search_provider: str = "tavily"  # tavily | serpapi
