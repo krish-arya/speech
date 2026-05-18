@@ -54,9 +54,18 @@ async def text_query(text: str = Form(...)):
 
 @router.get("/tts")
 async def tts_stream(text: str):
+    return _tts_response(text)
+
+
+@router.post("/tts")
+async def tts_stream_post(text: str = Form(...)):
+    return _tts_response(text)
+
+
+def _tts_response(text: str) -> StreamingResponse:
     return StreamingResponse(
         stream_tts(text),
-        media_type="audio/opus",
+        media_type="audio/mpeg",
         headers={"Cache-Control": "no-cache"},
     )
 

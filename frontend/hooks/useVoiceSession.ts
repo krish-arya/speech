@@ -14,6 +14,16 @@ export function useVoiceSession() {
   const audioRef = useRef<AudioContext | null>(null);
   const sourceRef = useRef<AudioBufferSourceNode | null>(null);
 
+  const prepareAudio = useCallback(async () => {
+    if (!audioRef.current || audioRef.current.state === "closed") {
+      audioRef.current = new AudioContext();
+    }
+    if (audioRef.current.state === "suspended") {
+      await audioRef.current.resume();
+    }
+    return audioRef.current;
+  }, []);
+
   const stopSpeaking = useCallback(() => {
     if (sourceRef.current) {
       try { sourceRef.current.stop(); } catch {}
@@ -34,23 +44,24 @@ export function useVoiceSession() {
       const arrayBuffer = await res.arrayBuffer();
       if (arrayBuffer.byteLength === 0) return;
 
-      audioRef.current = new AudioContext();
-      const audioBuffer = await audioRef.current.decodeAudioData(arrayBuffer);
-      sourceRef.current = audioRef.current.createBufferSource();
+      const audioContext = await prepareAudio();
+      const audioBuffer = await audioContext.decodeAudioData(arrayBuffer);
+      sourceRef.current = audioContext.createBufferSource();
       sourceRef.current.buffer = audioBuffer;
-      sourceRef.current.connect(audioRef.current.destination);
+      sourceRef.current.connect(audioContext.destination);
       sourceRef.current.start(0);
     } catch {
       // TTS is non-critical
     }
-  }, []);
+  }, [prepareAudio]);
 
   const startSession = useCallback(async () => {
     stopSpeaking();
+    await prepareAudio().catch(() => {});
     streamer.reset();
     setState("listening");
     await recorder.startRecording();
-  }, [recorder, streamer, stopSpeaking]);
+  }, [recorder, streamer, stopSpeaking, prepareAudio]);
 
   const endSession = useCallback(async () => {
     if (recorder.isRecording) {
@@ -59,10 +70,10 @@ export function useVoiceSession() {
         setState("thinking");
         try {
           const res = await sendAudioForQuery(blob);
-          await streamer.processStream(res);
+          const responseText = await streamer.processStream(res);
           setState("responding");
-          if (streamer.response) {
-            await speakResponse(streamer.response);
+          if (responseText) {
+            await speakResponse(responseText);
           }
         } catch {
           setState("idle");

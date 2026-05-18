@@ -11,10 +11,10 @@ settings = get_settings()
 
 async def stream_tts(text: str) -> AsyncIterator[bytes]:
     body = {
-        "model": "openai/tts-1",
+        "model": settings.tts_model,
         "input": text,
         "voice": settings.tts_voice,
-        "response_format": "opus",
+        "response_format": "mp3",
     }
     try:
         async with httpx.AsyncClient(timeout=httpx.Timeout(30.0)) as client:
@@ -27,6 +27,14 @@ async def stream_tts(text: str) -> AsyncIterator[bytes]:
                 },
                 json=body,
             ) as resp:
+                if resp.status_code >= 400:
+                    body_text = (await resp.aread()).decode("utf-8", errors="replace")
+                    logger.error(
+                        "OpenRouter TTS error for model %s: %s %s",
+                        settings.tts_model,
+                        resp.status_code,
+                        body_text,
+                    )
                 resp.raise_for_status()
                 async for chunk in resp.aiter_bytes():
                     yield chunk

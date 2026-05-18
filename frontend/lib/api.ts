@@ -37,5 +37,11 @@ export async function sendTextForQuery(text: string): Promise<Response> {
 }
 
 export async function fetchTTS(text: string): Promise<Response> {
-  return fetch(`${API_BASE}/api/tts?text=${encodeURIComponent(text)}`);
+  const formData = new FormData();
+  formData.append("text", text);
+
+  return fetch(`${API_BASE}/api/tts`, {
+    method: "POST",
+    body: formData,
+  });
 }

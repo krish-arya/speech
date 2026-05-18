@@ -13,7 +13,7 @@ interface UseStreamingResponseReturn {
   status: string;
   transcript: string;
   isStreaming: boolean;
-  processStream: (response: Response) => Promise<void>;
+  processStream: (response: Response) => Promise<string>;
   reset: () => void;
 }
 
@@ -35,11 +35,12 @@ export function useStreamingResponse(): UseStreamingResponseReturn {
     const reader = res.body?.getReader();
     if (!reader) {
       setIsStreaming(false);
-      return;
+      return "";
     }
 
     const decoder = new TextDecoder();
     let buffer = "";
+    let responseText = "";
 
     try {
       while (true) {
@@ -65,9 +66,11 @@ export function useStreamingResponse(): UseStreamingResponseReturn {
                 setSources(event.data);
                 break;
               case "token":
+                responseText += event.data;
                 setResponse((prev) => prev + event.data);
                 break;
               case "done":
+                if (event.data?.text) responseText = event.data.text;
                 if (event.data?.sources) setSources(event.data.sources);
                 break;
               case "error":
@@ -87,6 +90,7 @@ export function useStreamingResponse(): UseStreamingResponseReturn {
       setIsStreaming(false);
       reader.releaseLock();
     }
+    return responseText;
   }, []);
 
   const reset = useCallback(() => {

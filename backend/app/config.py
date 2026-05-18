@@ -12,6 +12,7 @@ class Settings(BaseSettings):
     search_provider: str = "tavily"  # tavily | serpapi
     default_llm_model: str = "google/gemini-2.5-flash"
     fast_llm_model: str = "google/gemini-2.5-flash-lite"
+    tts_model: str = "openai/gpt-4o-mini-tts-2025-12-15"
     tts_voice: str = "alloy"
     host: str = "0.0.0.0"
     port: int = 8000
