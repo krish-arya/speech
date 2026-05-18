@@ -70,6 +70,9 @@ export function useStreamingResponse(): UseStreamingResponseReturn {
               case "done":
                 if (event.data?.sources) setSources(event.data.sources);
                 break;
+              case "error":
+                setStatus(event.data || "Request failed");
+                break;
             }
           } catch {
             // skip malformed lines

@@ -14,6 +14,16 @@ class Settings(BaseSettings):
     host: str = "0.0.0.0"
     port: int = 8000
     log_level: str = "INFO"
+    cors_origins: str = "http://localhost:3000,http://localhost:3001"
+    cors_origin_regex: str = r"https://.*\.vercel\.app"
+
+    @property
+    def allowed_cors_origins(self) -> list[str]:
+        return [
+            origin.strip()
+            for origin in self.cors_origins.split(",")
+            if origin.strip()
+        ]
 
     class Config:
         env_file = ".env"

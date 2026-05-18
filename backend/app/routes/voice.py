@@ -19,21 +19,27 @@ async def voice_query(audio: UploadFile = File(...)):
     audio_data = await audio.read()
     mime = audio.content_type or "audio/webm"
 
-    transcribed = await transcribe_audio(audio_data, mime)
+    try:
+        transcribed = await transcribe_audio(audio_data, mime)
+    except Exception:
+        logger.exception("Transcription failed")
+        return StreamingResponse(
+            _error_stream("Could not transcribe audio. Check backend logs and API keys."),
+            media_type="text/event-stream",
+            headers=_stream_headers(),
+        )
+
     if not transcribed.strip():
         return StreamingResponse(
             _error_stream("Could not transcribe audio"),
             media_type="text/event-stream",
+            headers=_stream_headers(),
         )
 
     return StreamingResponse(
         _stream_response(transcribed),
         media_type="text/event-stream",
-        headers={
-            "Cache-Control": "no-cache",
-            "Connection": "keep-alive",
-            "X-Accel-Buffering": "no",
-        },
+        headers=_stream_headers(),
     )
 
 
@@ -42,11 +48,7 @@ async def text_query(text: str = Form(...)):
     return StreamingResponse(
         _stream_response(text),
         media_type="text/event-stream",
-        headers={
-            "Cache-Control": "no-cache",
-            "Connection": "keep-alive",
-            "X-Accel-Buffering": "no",
-        },
+        headers=_stream_headers(),
     )
 
 
@@ -73,3 +75,11 @@ async def _stream_response(transcribed: str):
 
 async def _error_stream(message: str):
     yield f"data: {json.dumps({'type': 'error', 'data': message})}\n\n"
+
+
+def _stream_headers() -> dict[str, str]:
+    return {
+        "Cache-Control": "no-cache",
+        "Connection": "keep-alive",
+        "X-Accel-Buffering": "no",
+    }

@@ -13,19 +13,21 @@ logging.basicConfig(
     format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
 )
 
-app = FastAPI(title="Voice Search Assistant", version="1.0.0")
+fastapi_app = FastAPI(title="Voice Search Assistant", version="1.0.0")
 
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["http://localhost:3000", "https://*.vercel.app"],
+fastapi_app.include_router(voice_router)
+
+
+@fastapi_app.get("/health")
+async def health():
+    return {"status": "ok"}
+
+
+app = CORSMiddleware(
+    app=fastapi_app,
+    allow_origins=settings.allowed_cors_origins,
+    allow_origin_regex=settings.cors_origin_regex,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
-
-app.include_router(voice_router)
-
-
-@app.get("/health")
-async def health():
-    return {"status": "ok"}
